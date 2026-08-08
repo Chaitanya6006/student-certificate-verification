@@ -1,0 +1,132 @@
+// ═══════════════════════════════════════════════════════════════════════════
+//  Certificate Registry — Student Certificate Verification
+//
+//  PUBLIC LEDGER STATE (anyone on-chain can read):
+//    • certificates  : Map<certId, Certificate> — one entry per issued cert
+//        - studentId   : public student identifier (e.g. admission number)
+//        - institution : issuing institution / college
+//        - docHash     : SHA-256 (persistentHash) of the document bytes
+//        - issuedAt    : block timestamp of issuance
+//        - revoked     : revocation flag (set for stolen/forged certs)
+//    • lastVerification : disclosed result of the most recent verify call
+//        { certId, verified, revoked } — deliberately public so anyone can
+//        see the ANSWER without seeing the document
+//    • adminHash      : public image of the admin secret (set at deploy time)
+//
+//  PRIVATE (WITNESS) INPUTS — proved inside the circuit, NEVER revealed:
+//    • docBytes     : the full certificate document (name, course, marks...).
+//        Only its SHA-256 digest is ever committed on-chain. An on-chain
+//        observer can NEVER see the student's name, marks or document text.
+//    • adminSecret  : proves the caller is the registered admin. Only its
+//        public image (adminHash) sits in the ledger; the secret itself
+//        never leaves the proof.
+//
+//  WHY THIS MATTERS (the privacy story):
+//    An observer can see that certificate "CERT-0001" exists and is bound to
+//    digest 0xAB..CD, but cannot see what the certificate contains. When a
+//    student (or an employer) verifies a certificate, the circuit re-hashes
+//    the private document and proves "this document matches the on-chain
+//    certificate" — the document is never revealed, only the answer
+//    (verified / not verified / revoked) is disclosed via disclose(). Fake
+//    or tampered documents produce verified = false, and a revoked
+//    certificate always reports revoked = true.
+// ═══════════════════════════════════════════════════════════════════════════
+
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+struct Certificate {
+    studentId: Opaque<"string">;
+    institution: Opaque<"string">;
+    docHash: Bytes<32>;
+    issuedAt: Uint<64>;
+    revoked: Boolean;
+}
+
+struct VerificationResult {
+    certId: Bytes<32>;
+    verified: Boolean;
+    revoked: Boolean;
+}
+
+export ledger certificates: Map<Bytes<32>, Certificate>;
+export ledger lastVerification: VerificationResult;
+export ledger adminHash: Bytes<32>;
+
+constructor(initialAdminHash: Bytes<32>) {
+    adminHash = disclose(initialAdminHash);
+    lastVerification = default<VerificationResult>;
+}
+
+// Domain-separated public image of the admin secret. The same construction is
+// used off-chain (SHA-256 of "cert:admin:" ‖ secret) to derive the
+// constructor argument, and in-circuit to prove authorization.
+circuit adminImage(adminSecret: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<2, Bytes<32>>>([pad(32, "cert:admin:"), adminSecret]);
+}
+
+// Admin issues a certificate.
+//   adminSecret (private witness) → proves admin authorization in-circuit
+//   certId / studentId / institution (public identifiers) → disclosed
+//   docBytes (private witness)    → hashed in-circuit; only the digest is
+//                                    committed on-chain via disclose()
+// NOTE on issuedAt: Compact cannot read the block timestamp directly (that
+// would leak time information) — it only exposes blockTimeLt/Gte/Gt/Lte
+// comparisons. So the issuance timestamp is a PUBLIC, client-supplied
+// parameter (disclosed), like the date printed on a paper certificate.
+// It is informational, not security-critical: chain finality protects the
+// certificate itself.
+export circuit issueCertificate(
+    adminSecret: Bytes<32>,
+    certId: Bytes<32>,
+    studentId: Opaque<"string">,
+    institution: Opaque<"string">,
+    docBytes: Bytes<512>,
+    issuedAt: Uint<64>,
+): [] {
+    assert(adminImage(adminSecret) == adminHash, "Not the registered admin");
+    assert(!certificates.member(disclose(certId)), "Certificate ID already exists");
+    certificates.insert(disclose(certId), disclose(Certificate {
+        studentId: studentId,
+        institution: institution,
+        docHash: persistentHash<Bytes<512>>(docBytes),
+        issuedAt: disclose(issuedAt),
+        revoked: false,
+    }));
+}
+
+// Anyone verifies a certificate by submitting the document.
+//   docBytes (private witness) is hashed in-circuit and compared against the
+//   public digest. Only the result is disclosed — the document never is.
+export circuit verifyCertificate(certId: Bytes<32>, docBytes: Bytes<512>): [] {
+    if (certificates.member(disclose(certId))) {
+        const cert = certificates.lookup(disclose(certId));
+        lastVerification = disclose(VerificationResult {
+            certId: certId,
+            verified: persistentHash<Bytes<512>>(docBytes) == cert.docHash,
+            revoked: cert.revoked,
+        });
+    } else {
+        lastVerification = disclose(VerificationResult {
+            certId: certId,
+            verified: false,
+            revoked: false,
+        });
+    }
+}
+
+// Admin revokes a certificate (stolen / forged / withdrawn credentials).
+//   adminSecret (private witness) → proves authorization; never revealed.
+export circuit revokeCertificate(adminSecret: Bytes<32>, certId: Bytes<32>): [] {
+    assert(adminImage(adminSecret) == adminHash, "Not the registered admin");
+    assert(certificates.member(disclose(certId)), "Certificate does not exist");
+    const cert = certificates.lookup(disclose(certId));
+    certificates.insert(disclose(certId), disclose(Certificate {
+        studentId: cert.studentId,
+        institution: cert.institution,
+        docHash: cert.docHash,
+        issuedAt: cert.issuedAt,
+        revoked: true,
+    }));
+}
