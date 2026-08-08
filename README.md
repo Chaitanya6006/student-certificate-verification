@@ -8,6 +8,13 @@ INTO the Midnight — SPPU bootcamp project.
 [![Generic badge](https://img.shields.io/badge/TypeScript-6.0-blue.svg)](https://shields.io/)
 [![Generic badge](https://img.shields.io/badge/Midnight.js-4.1.1-yellow.svg)](https://shields.io/)
 
+## Screenshot
+
+<img width="1232" height="709" alt="image" src="https://github.com/user-attachments/assets/68422b1b-a35d-4b36-9128-c189cbc4b9d0" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/05f843b5-65d5-4278-a585-33b781c82cb9" />
+
+
+
 ## Live on Preview
 
 | | |
