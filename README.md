@@ -17,6 +17,10 @@ INTO the Midnight — SPPU bootcamp project.
 | **Deployer** | `mn_addr_preview1xcq5nqld5u6wmgcss4zn2p7q2w0ldu9srz88rxvqrvvdg704rsnswxkeyw` |
 | **Faucet** | https://faucet.preview.midnight.network |
 
+## Initial Product Idea
+
+A university-grade **scholastic credential registry** where issuing institutions onboard once (registering a zero-knowledge admin credential) and then issue, verify and revoke student certificates entirely through a web app — no paperwork, no shared databases. Students get a private link containing their certificate (grade, name, course) and employers or other universities verify it in zero knowledge against the public registry: the check proves "the document you hold is the one the university issued" without revealing anything beyond a VALID/REVOKED/INVALID answer. Institutes keep full control (issue + revoke rights), students keep full privacy of their marks, and the ledger catches forged, altered or revoked certificates instantly.
+
 ## The Problem It Solves
 
 Paper certificates are forged by altering names, marks and grades. Central databases can be silently rewritten. Blockchain fixes *tamper-evidence*, but a public chain would leak every student's private data. Midnight's **zero-knowledge runtime** solves both at once: commitments are public, records are private.
@@ -49,6 +53,18 @@ Tampering scenario: fake doc ⇒ hash mismatch ⇒ `INVALID`. Revoked ⇒ `REVOK
 - The raw document (512-byte field) enters the circuit **only as a witness**: it is consumed inside the zero-knowledge proof and provably consistent with the on-chain hash — nothing else.
 - The admin secret is a 32-byte value hashed with a domain separator (`sha256("cert:admin:" ∥ zeros ∥ secret)`); only that digest is stored on-chain. It lives exclusively in `.certificate-admin-secret.json` (gitignored) or in your wallet's memory in the web UI.
 - The test suite proves this: `tests/certificate.test.ts` inspects every public state after issuance and asserts the name/grade strings are **absent from the ledger**.
+
+## Public State vs Private Witness
+
+| | On-chain (public state) | In the proof (private witness) |
+|---|---|---|
+| **What is it** | Data that anyone can read from the ledger | Data that only the prover sees; consumed inside the circuit |
+| **This contract** | `certId`, `studentId`, `institution`, `docHash`, `issuedAt`, `revoked`, `lastVerification`, `adminHash` | `docBytes` (the full 512-byte document: name, course, grade) and `adminSecret` |
+| **What the verifier learns** | That a certificate with this ID exists, was issued on date X by institute Y, and its content hashes to `docHash` | Nothing about `docBytes` — only that `SHA-256(docBytes)` equals the on-chain `docHash` |
+| **Integrity** | Public data cannot be modified without the node network accepting the transition (blockchain) | The prover cannot cheat: the circuit enforces the hash equality, so a fake document yields `INVALID` |
+
+Each circuit declares `witnesses: { … }` (private) and `public` outputs explicitly in `contracts/certificate.compact`;
+the compiler generates the ZK circuits (see `contracts/managed/certificate/keys/`) from that split.
 
 ## Circuits (`contracts/certificate.compact`)
 
