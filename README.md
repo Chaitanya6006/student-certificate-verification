@@ -17,6 +17,16 @@ INTO the Midnight — SPPU bootcamp project.
 | **Deployer** | `mn_addr_preview1xcq5nqld5u6wmgcss4zn2p7q2w0ldu9srz88rxvqrvvdg704rsnswxkeyw` |
 | **Faucet** | https://faucet.preview.midnight.network |
 
+### Verify on-chain (any machine, no SDK)
+
+```bash
+curl -s "https://indexer.preview.midnight.network/api/v4/graphql" \
+  -H 'content-type: application/json' \
+  -d '{"query":"{ contract(address: \"657e40da5bbacca8135e0e8a02fe2feccc6d1b85db06082085cd1fc2aab2025b\") { address state } }"}'
+```
+
+A non-null `state` confirms the contract exists on-chain. 8 transactions are recorded against the contract — the first (indexer id `14904`) is the deployment transaction; the full hash list is in [`docs/onchain-evidence.md`](docs/onchain-evidence.md).
+
 ## Initial Product Idea
 
 A university-grade **scholastic credential registry** where issuing institutions onboard once (registering a zero-knowledge admin credential) and then issue, verify and revoke student certificates entirely through a web app — no paperwork, no shared databases. Students get a private link containing their certificate (grade, name, course) and employers or other universities verify it in zero knowledge against the public registry: the check proves "the document you hold is the one the university issued" without revealing anything beyond a VALID/REVOKED/INVALID answer. Institutes keep full control (issue + revoke rights), students keep full privacy of their marks, and the ledger catches forged, altered or revoked certificates instantly.
@@ -163,6 +173,13 @@ Deploy the static bundle to Vercel/Netlify: the included `vercel.json` / `netlif
 - **Preview RPC drops** (`disconnected from wss://rpc.preview.midnight.network`): the public RPC sometimes closes sockets during submit-and-watch. Deploy and CLI automatically retry (`runCall`, DUST registration loop). If you see it in custom scripts, the same retry is the pattern.
 - **`expected instance of StateValue`**: two copies of `onchain-runtime-v3` got installed. `package.json` pins `@midnight-ntwrk/onchain-runtime-v3: 3.0.0` via `overrides` — reinstall with a clean `node_modules` and `package-lock` and never reintroduce a second copy.
 - **Faucet waits forever**: the faucet step is intentionally manual (anti-abuse). Use `MIDNIGHT_FAUCET_TIMEOUT_MS=120000`.
+
+### Browser runtime (wallet connect) — known gotchas, all fixed in this repo
+
+- **"Expected ZK artifact… text/html"** — the Midnight Wallet fetches verifier keys as `keys/<circuit>.verifier`; `scripts/frontend-keys.mjs` serves the compiler's original layout (plus `<circuit>.vkey` for midnight-js).
+- **"No private state found at private state ID"** — `findDeployedContract` requires `initialPrivateState`; ours is statically `{}`, passed explicitly in `frontend/src/midnight/midnight.ts`.
+- **"Network ID has not been configured"** — call `setNetworkId('preview')` (`@midnight-ntwrk/midnight-js-network-id`) before any wallet operation.
+- **`Buffer is not defined`** — the compact runtime needs Node globals; `vite-plugin-node-polyfills` is configured in `frontend/vite.config.ts` (`globals: { Buffer, process, global }`).
 
 ## Roadmap
 
