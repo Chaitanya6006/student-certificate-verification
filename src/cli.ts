@@ -140,6 +140,32 @@ async function syncWallet(walletCtx: WalletContext): Promise<void> {
   await persistWalletState(network, walletCtx);
 }
 
+const CALL_MAX_ATTEMPTS = 3;
+const CALL_RETRY_DELAY_MS = 15_000;
+
+/** Runs a transaction-producing call, retrying transient Preview RPC drops. */
+async function runCall<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  let last: unknown;
+  for (let attempt = 1; attempt <= CALL_MAX_ATTEMPTS; attempt++) {
+    try {
+      return await fn();
+    } catch (e) {
+      last = e;
+      console.log(`  ⚠ ${label} failed (${attempt}/${CALL_MAX_ATTEMPTS}): ${(e as Error).message}`);
+      if (attempt < CALL_MAX_ATTEMPTS) {
+        console.log(`  Retrying in ${CALL_RETRY_DELAY_MS / 1000}s...`);
+        await new Promise((r) => setTimeout(r, CALL_RETRY_DELAY_MS));
+      }
+    }
+  }
+  throw last as Error;
+}
+
+/** Like runCall but for untyped (any) transaction results. */
+async function runCallAny(label: string, fn: () => Promise<any>): Promise<any> {
+  return runCall<any>(label, fn);
+}
+
 async function connectDeployed(adminSecret?: Uint8Array) {
   const deployment = getDeployment(network);
   if (!deployment) {
@@ -198,13 +224,15 @@ async function cmdIssue(args: Record<string, string>): Promise<void> {
   console.log('  ℹ  The document stays on this machine — only its SHA-256 digest will be committed on-chain.\n');
   console.log('  Generating zero-knowledge proof...');
   try {
-    const tx = await deployed.callTx.issueCertificate(
-      admin.secret,
-      certIdToBytes(certId),
-      student,
-      institution,
-      toDocBytes(docJson),
-      issuedAt,
+    const tx = await runCallAny('Certificate issue', () =>
+      deployed.callTx.issueCertificate(
+        admin.secret,
+        certIdToBytes(certId),
+        student,
+        institution,
+        toDocBytes(docJson),
+        issuedAt,
+      ),
     );
     console.log(`\n  ✅ Certificate ${certId} issued!`);
     console.log(`  Transaction ID: ${tx.public.txId}`);
@@ -242,7 +270,9 @@ async function cmdVerify(args: Record<string, string>): Promise<void> {
   const docBytes = docJson === null ? new Uint8Array(512) : toDocBytes(docJson);
 
   try {
-    const tx = await deployed.callTx.verifyCertificate(certIdToBytes(certId), docBytes);
+    const tx = await runCallAny('Verification', () =>
+      deployed.callTx.verifyCertificate(certIdToBytes(certId), docBytes),
+    );
     console.log(`  ✅ Verification submitted!`);
     console.log(`  Transaction ID: ${tx.public.txId}`);
     console.log(`  Block height: ${tx.public.blockHeight}\n`);
@@ -288,7 +318,9 @@ async function cmdRevoke(args: Record<string, string>): Promise<void> {
   console.log(`\n  Revoking certificate ${certId}...`);
   console.log('  Generating zero-knowledge proof (admin authorization)...');
   try {
-    const tx = await deployed.callTx.revokeCertificate(admin.secret, certIdToBytes(certId));
+    const tx = await runCallAny('Certificate revoke', () =>
+      deployed.callTx.revokeCertificate(admin.secret, certIdToBytes(certId)),
+    );
     console.log(`\n  ✅ Certificate ${certId} revoked!`);
     console.log(`  Transaction ID: ${tx.public.txId}`);
     console.log(`  Block height: ${tx.public.blockHeight}\n`);
