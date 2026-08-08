@@ -3,6 +3,7 @@ import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import wasm from 'vite-plugin-wasm';
 import topLevelAwait from 'vite-plugin-top-level-await';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -43,6 +44,11 @@ export default defineConfig({
     topLevelAwait({
       promiseExportName: '__tla',
       promiseImportName: (i) => `__tla_${i}`,
+    }),
+    nodePolyfills({
+      // The compact runtime (midnight-js-utils, indexer provider, …) uses the
+      // Node `Buffer`/`process` globals at runtime — expose them in the browser.
+      globals: { Buffer: true, process: true, global: true },
     }),
   ],
   optimizeDeps: {

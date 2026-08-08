@@ -7,6 +7,7 @@
 
 import semver from 'semver';
 import { ConnectedAPI, type InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
+import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { findDeployedContract, type FoundContract } from '@midnight-ntwrk/midnight-js-contracts';
 import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/compact-js';
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
@@ -85,6 +86,8 @@ export const initializeProviders = async (): Promise<{
   providers: CertificateProviders;
   unshieldedAddress: string;
 }> => {
+  // Required by the contract runtime before any wallet/contract op.
+  setNetworkId(DEFAULT_NETWORK_ID);
   const connectedAPI = await connectToWallet();
   const config = await connectedAPI.getConfiguration();
   const zkConfigPath = `${window.location.origin}/managed/certificate`;
@@ -139,6 +142,10 @@ export const joinContract = async (
     compiledContract,
     contractAddress,
     privateStateId: CERTIFICATE_PRIVATE_STATE_ID,
+    // Our contract keeps no secret state (the document itself is the witness),
+    // so the initial private state is statically empty. Without this, the join
+    // path throws "No private state found at private state ID …".
+    initialPrivateState: {},
   });
 };
 

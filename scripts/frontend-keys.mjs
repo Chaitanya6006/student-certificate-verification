@@ -35,8 +35,12 @@ async function main() {
       await cp(from, join(target, 'keys', file));
       count++;
     } else if (file.endsWith('.verifier')) {
+      // The Midnight Wallet extension resolves verifier keys as
+      // <base>/keys/<circuit>.verifier, so serve the compiler layout as-is.
+      await cp(from, join(target, 'keys', file));
+      // The FetchZkConfigProvider (midnight-js) resolves them as <base>/<circuit>.vkey.
       await cp(from, join(target, `${file.replace(/\.verifier$/, '')}.vkey`));
-      count++;
+      count += 2;
     }
   }
   for (const file of zkir) {
@@ -50,7 +54,8 @@ async function main() {
   await mkdir(contractTarget, { recursive: true });
   await cp(join(source, 'contract', 'index.js'), join(contractTarget, 'index.js'));
   await cp(join(source, 'contract', 'index.d.ts'), join(contractTarget, 'index.d.ts'));
-  count += 2;
+  await cp(join(source, 'contract', 'index.js.map'), join(contractTarget, 'index.js.map'));
+  count += 3;
 
   console.log(
     `Copied ${count} ZK artifacts + contract module (frontend/public/managed/certificate, frontend/src/generated/certificate-contract)`,
