@@ -15,8 +15,9 @@
     "proof-server:start": "docker compose up -d --wait",
     "proof-server:stop": "docker compose down",
     "clean": "rm -rf contracts/managed .midnight-state.json .midnight-wallet-state frontend/node_modules frontend/dist",
-    "frontend:dev": "npm --prefix frontend run dev",
-    "frontend:build": "npm --prefix frontend run build"
+    "frontend:keys": "node scripts/frontend-keys.mjs",
+    "frontend:dev": "npm run frontend:keys && npm --prefix frontend run dev",
+    "frontend:build": "npm run frontend:keys && npm --prefix frontend run build"
   },
   "dependencies": {
     "@midnight-ntwrk/compact-runtime": "0.16.0",

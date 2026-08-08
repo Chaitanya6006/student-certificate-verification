@@ -62,7 +62,12 @@ temp/
 # Frontend
 frontend/node_modules/
 frontend/dist/
+frontend/.vite/
 frontend/.env.local
+
+# Frontend build artifacts copied by `npm run frontend:keys` (compiled contract + ZK keys)
+frontend/src/generated/
+frontend/public/managed/
 
 # Admin secret for the certificate contract (sensitive — never commit)
 .certificate-admin-secret.json
