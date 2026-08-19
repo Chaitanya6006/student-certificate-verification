@@ -90,7 +90,7 @@ export const initializeProviders = async (): Promise<{
   setNetworkId(DEFAULT_NETWORK_ID);
   const connectedAPI = await connectToWallet();
   const config = await connectedAPI.getConfiguration();
-  const zkConfigPath = `${window.location.origin}/managed/certificate`;
+  const zkConfigPath = `${window.location.origin}${import.meta.env.BASE_URL}managed/certificate`;
   const keyMaterialProvider = new FetchZkConfigProvider<CertificateCircuitKeys>(zkConfigPath, fetch.bind(window));
   const shieldedAddresses = await connectedAPI.getShieldedAddresses();
   const proverServerUri = config.proverServerUri;

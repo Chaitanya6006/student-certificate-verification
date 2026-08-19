@@ -1,0 +1,87 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Compile + tests (devnet)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile the Compact contract (circuits + keys)
+        run: npm run compile
+
+      - name: Sanity — compiled artifacts present
+        run: |
+          test -d contracts/managed/certificate/keys
+          ls contracts/managed/certificate/keys | wc -l | grep -q '[6-9]\|1[0-9]'
+
+      - name: Start local devnet (node, indexer, proof server)
+        run: docker compose up -d --wait
+
+      - name: Run integration tests (real proofs against devnet)
+        run: npm test
+
+      - name: Build web app
+        run: npm run frontend:build
+        env:
+          VITE_CONTRACT_ADDRESS: 657e40da5bbacca8135e0e8a02fe2feccc6d1b85db06082085cd1fc2aab2025b
+          VITE_NETWORK: preview
+
+  deploy-pages:
+    name: Deploy web app to GitHub Pages
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: test
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build web app (deployed contract on Preview)
+        run: |
+          npm ci
+          npm run frontend:build
+        env:
+          VITE_CONTRACT_ADDRESS: 657e40da5bbacca8135e0e8a02fe2feccc6d1b85db06082085cd1fc2aab2025b
+          VITE_NETWORK: preview
+          GH_PAGES: 'true'
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

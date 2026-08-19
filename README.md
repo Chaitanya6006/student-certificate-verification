@@ -7,6 +7,7 @@ INTO the Midnight — SPPU bootcamp project.
 [![Generic badge](https://img.shields.io/badge/Compact%20Compiler-0.31.1-1abc9c.svg)](https://shields.io/)
 [![Generic badge](https://img.shields.io/badge/TypeScript-6.0-blue.svg)](https://shields.io/)
 [![Generic badge](https://img.shields.io/badge/Midnight.js-4.1.1-yellow.svg)](https://shields.io/)
+[![CI/CD](https://github.com/Chaitanya6006/student-certificate-verification/actions/workflows/ci.yml/badge.svg)](https://github.com/Chaitanya6006/student-certificate-verification/actions/workflows/ci.yml)
 
 ## Screenshot
 
@@ -33,6 +34,13 @@ curl -s "https://indexer.preview.midnight.network/api/v4/graphql" \
 ```
 
 A non-null `state` confirms the contract exists on-chain. 8 transactions are recorded against the contract — the first (indexer id `14904`) is the deployment transaction; the full hash list is in [`docs/onchain-evidence.md`](docs/onchain-evidence.md).
+
+> **Live demo:** https://chaitanya6006.github.io/student-certificate-verification/ (GitHub Pages, auto-deployed by CI/CD — the wallet must be set to the **preview** network)
+
+## Demo video
+
+**1-minute walkthrough:** _(paste the video link here)_
+Covers: connect wallet → issue a certificate (proving inside the wallet) → verify it in zero knowledge → revoke → observe the ledger.
 
 ## Initial Product Idea
 
@@ -66,10 +74,25 @@ Tampering scenario: fake doc ⇒ hash mismatch ⇒ `INVALID`. Revoked ⇒ `REVOK
 
 ## Privacy — Why the grade never leaks
 
+### What an observer of the chain CAN learn
+
+- That a certificate with ID `CERT-…` exists, issued to student ID `SPPU-2026-0002` by `SPPU — Pune` on a given date.
+- The SHA-256 digest `docHash` of the document (and that it is a 512-byte document).
+- That the certificate is currently `valid` or `revoked`, and the outcome of the last verification (`VALID` / `INVALID` / `REVOKED`).
+- That someone *somewhere* called `issue` / `verify` / `revoke` at a block height — but **not who** (Midnight's shielded transactions hide sender and recipient).
+
+### What an observer CANNOT learn
+
+- ✗ The student's **name**, **course**, **grade** — these are only inputs to a zero-knowledge proof (circuit witnesses), never written on-chain.
+- ✗ The full certificate document: only its 512-byte right-padded digest is committed.
+- ✗ The **admin secret** — only a domain-separated hash of it sits in `adminHash`.
+- ✗ The identity of the issuing admin per transaction (shielded tx semantics), or which verifier ran `verify`.
+
+The test suite asserts this mechanically: `tests/certificate.test.ts` inspects every public state and event after issuance and proves the name/grade strings are **absent on-chain**.
+
 - The ledger exposes only: `certId`, `studentId`, `institution`, `docHash`, `issuedAt`, `revoked`, `lastVerification`, `adminHash`.
 - The raw document (512-byte field) enters the circuit **only as a witness**: it is consumed inside the zero-knowledge proof and provably consistent with the on-chain hash — nothing else.
 - The admin secret is a 32-byte value hashed with a domain separator (`sha256("cert:admin:" ∥ zeros ∥ secret)`); only that digest is stored on-chain. It lives exclusively in `.certificate-admin-secret.json` (gitignored) or in your wallet's memory in the web UI.
-- The test suite proves this: `tests/certificate.test.ts` inspects every public state after issuance and asserts the name/grade strings are **absent from the ledger**.
 
 ## Public State vs Private Witness
 
@@ -194,9 +217,15 @@ Deploy the static bundle to Vercel/Netlify: the included `vercel.json` / `netlif
 - [x] Devnet integration test suite (10 tests, real proofs)
 - [x] CLI + Preview deployment
 - [x] React front end with wallet connect
-- [ ] Vercel/Netlify live URL (copy CI env vars)
+- [x] CI/CD pipeline (GitHub Actions: compile, tests, web build, Pages deploy)
+- [x] Live demo on GitHub Pages
+- [ ] 1-minute demo video (link in the section above)
 - [ ] Student-facing "check my result" view + QR codes
 - [ ] Batch issuance for many students (multiple `issueCertificate` per transaction)
+
+## Product Proposal
+
+See [`docs/PROPOSAL.md`](docs/PROPOSAL.md) — the bootcamp proposal (idea from the provided list: **ZKP-based certificate registry**), with privacy model and scope.
 
 ## License
 

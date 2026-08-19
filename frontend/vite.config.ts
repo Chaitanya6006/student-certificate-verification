@@ -7,6 +7,7 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: process.env.GH_PAGES === 'true' ? '/student-certificate-verification/' : '/',
   cacheDir: './.vite',
   resolve: {
     alias: {
