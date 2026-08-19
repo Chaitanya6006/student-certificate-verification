@@ -46,6 +46,9 @@ jobs:
       - name: Run integration tests (real proofs against devnet)
         run: npm test
 
+      - name: Install frontend dependencies
+        run: npm --prefix frontend ci
+
       - name: Build web app
         run: npm run frontend:build
         env:
@@ -75,6 +78,7 @@ jobs:
       - name: Build web app (deployed contract on Preview)
         run: |
           npm ci
+          npm --prefix frontend ci
           npm run frontend:build
         env:
           VITE_CONTRACT_ADDRESS: 657e40da5bbacca8135e0e8a02fe2feccc6d1b85db06082085cd1fc2aab2025b
