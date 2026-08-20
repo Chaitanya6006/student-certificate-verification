@@ -43,6 +43,41 @@ const contractPath = path.join(zkConfigPath, 'contract', 'index.js');
 const networkConfig: NetworkConfig = NETWORK_CONFIGS.undeployed;
 const PRIVATE_STATE_ID = 'certificatePrivateStateTest';
 
+// Polls the devnet node until it is actually producing blocks. On a fresh CI
+// runner `docker compose up -d --wait` reports healthy before the chain starts;
+// connecting immediately then fails the wallet sync (RPC loss on startup).
+async function waitForNodeProducing(): Promise<void> {
+  const deadline = Date.now() + 180_000;
+  while (Date.now() < deadline) {
+    try {
+      const ws = new WebSocket('ws://127.0.0.1:9944');
+      await new Promise<void>((resolve, reject) => {
+        ws.onopen = () => resolve();
+        ws.onerror = () => reject(new Error('connection error'));
+        ws.onclose = () => reject(new Error('connection closed'));
+      });
+      const result = await new Promise<any>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('RPC timeout')), 5000);
+        ws.onmessage = (ev) => {
+          const msg = JSON.parse(ev.data as string);
+          if (msg.id === 1) {
+            clearTimeout(timer);
+            resolve(msg);
+          }
+        };
+        ws.send(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'chain_getHeader', params: [] }));
+      });
+      ws.close();
+      const height = Number.parseInt(result?.result?.number ?? '0x0', 16);
+      if (height > 4) return;
+    } catch {
+      // not ready yet — keep polling
+    }
+    await new Promise((r) => setTimeout(r, 5000));
+  }
+  throw new Error(`Devnet node did not start producing blocks within ${deadline / 1000}s`);
+}
+
 const adminSecret = crypto.randomBytes(32);
 const adminHash = deriveAdminHash(adminSecret);
 
@@ -84,6 +119,7 @@ function sha256(b: Uint8Array): Uint8Array {
 beforeAll(async () => {
   // 1. Devnet up.
   execSync('docker compose up -d --wait', { cwd: projectRoot, stdio: 'inherit', timeout: 600_000 });
+  await waitForNodeProducing();
 
   // 2. Contract must be compiled (npm run compile).
   if (!fs.existsSync(contractPath)) {
@@ -96,9 +132,19 @@ beforeAll(async () => {
     CompiledContract.withCompiledFileAssets(zkConfigPath),
   );
 
-  // 3. Wallet (genesis seed on the local devnet).
-  walletCtx = await createWallet({ network: 'undeployed', networkConfig, seed: '0000000000000000000000000000000000000000000000000000000000000001' });
-  await walletCtx.wallet.waitForSyncedState();
+  // 3. Wallet (genesis seed on the local devnet). The sync is retried because
+  //    the node occasionally drops the first connection right after boot.
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      walletCtx = await createWallet({ network: 'undeployed', networkConfig, seed: '0000000000000000000000000000000000000000000000000000000000000001' });
+      await walletCtx.wallet.waitForSyncedState();
+      break;
+    } catch (cause) {
+      if (attempt === 3) throw cause;
+      await waitForNodeProducing();
+      await new Promise((r) => setTimeout(r, 10_000));
+    }
+  }
   await persistWalletState('undeployed', walletCtx);
 
   // 4. DUST registration (needed to pay for transactions).
