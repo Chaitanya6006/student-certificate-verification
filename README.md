@@ -1,5 +1,8 @@
 # Student Certificate Verification dApp
 
+[![CI](https://github.com/Chaitanya6006/student-certificate-verification/actions/workflows/ci.yml/badge.svg)](https://github.com/Chaitanya6006/student-certificate-verification/actions/workflows/ci.yml)
+
+
 A tamper-proof certificate registry built on the [Midnight Network](https://midnight.network/). An issuing authority stores only a **SHA-256 digest** of each certificate on-chain; the document itself — student name, course, grade — is proved in **zero knowledge** and never revealed. Anyone can verify a certificate against the public record; forged or revoked certificates are detected instantly.
 
 INTO the Midnight — SPPU bootcamp project.
@@ -7,7 +10,6 @@ INTO the Midnight — SPPU bootcamp project.
 [![Generic badge](https://img.shields.io/badge/Compact%20Compiler-0.31.1-1abc9c.svg)](https://shields.io/)
 [![Generic badge](https://img.shields.io/badge/TypeScript-6.0-blue.svg)](https://shields.io/)
 [![Generic badge](https://img.shields.io/badge/Midnight.js-4.1.1-yellow.svg)](https://shields.io/)
-[![CI/CD](https://github.com/Chaitanya6006/student-certificate-verification/actions/workflows/ci.yml/badge.svg)](https://github.com/Chaitanya6006/student-certificate-verification/actions/workflows/ci.yml)
 
 ## Screenshot
 
