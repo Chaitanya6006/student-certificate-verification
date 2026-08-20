@@ -155,7 +155,10 @@ docker compose up -d --wait   # local devnet (node 9944, indexer 8088, proof ser
 
 Note: `npm run frontend:build` also runs `frontend:keys`, which copies the compiled circuits to `frontend/public/managed/certificate` for in-browser proving.
 
-## Test
+## Test Result
+
+<img width="1217" height="928" alt="tests-10-passed png" src="https://github.com/user-attachments/assets/45c696d7-6ff0-44a2-a79d-b16be053950c" />
+
 
 ```bash
 npm test
