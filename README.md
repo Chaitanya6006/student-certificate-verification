@@ -14,7 +14,12 @@ INTO the Midnight — SPPU bootcamp project.
 ## Screenshot
 
 <img width="1232" height="709" alt="image" src="https://github.com/user-attachments/assets/68422b1b-a35d-4b36-9128-c189cbc4b9d0" />
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/05f843b5-65d5-4278-a585-33b781c82cb9" />
+Dashbord Before wallet connect <img width="1916" height="968" alt="image" src="https://github.com/user-attachments/assets/9ed934c8-ead6-4637-899f-e94a5346ef86" />
+Wallet connection  <img width="1917" height="914" alt="image" src="https://github.com/user-attachments/assets/721ebdd0-1d7d-40b7-8979-676800ecc63e" />
+Issue a certificate <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/05f843b5-65d5-4278-a585-33b781c82cb9" />
+Verify Certificate <img width="1918" height="696" alt="image" src="https://github.com/user-attachments/assets/9c0a0fa4-6a96-4af1-a0ad-546762975e0a" />
+Revoke certificate or Certificate Ledger <img width="1919" height="847" alt="image" src="https://github.com/user-attachments/assets/7c8df861-6cc0-4747-af4c-2339a9b96949" />
+
 
 
 
