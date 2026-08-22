@@ -52,10 +52,11 @@ A non-null `state` confirms the contract exists on-chain. 8 transactions are rec
 
 > **Live demo:** https://chaitanya6006.github.io/student-certificate-verification/ (GitHub Pages, auto-deployed by CI/CD — the wallet must be set to the **preview** network)
 
-## Demo video
+## Demo Video
 
-**1-minute walkthrough:** _(paste the video link here)_
-Covers: connect wallet → issue a certificate (proving inside the wallet) → verify it in zero knowledge → revoke → observe the ledger.
+[▶️ Watch the demo on YouTube](https://youtu.be/B7ye9_xr1Uw)
+
+Covers: connect wallet → issue a certificate → verify it in zero knowledge → revoke → observe the ledger.
 
 ## Initial Product Idea
 
@@ -227,23 +228,7 @@ Deploy the static bundle to Vercel/Netlify: the included `vercel.json` / `netlif
 - **"Expected ZK artifact… text/html"** — the Midnight Wallet fetches verifier keys as `keys/<circuit>.verifier`; `scripts/frontend-keys.mjs` serves the compiler's original layout (plus `<circuit>.vkey` for midnight-js).
 - **"No private state found at private state ID"** — `findDeployedContract` requires `initialPrivateState`; ours is statically `{}`, passed explicitly in `frontend/src/midnight/midnight.ts`.
 - **"Network ID has not been configured"** — call `setNetworkId('preview')` (`@midnight-ntwrk/midnight-js-network-id`) before any wallet operation.
-- **`Buffer is not defined`** — the compact runtime needs Node globals; `vite-plugin-node-polyfills` is configured in `frontend/vite.config.ts` (`globals: { Buffer, process, global }`).
-
-## Roadmap
-
-- [x] Compact contract with issue/verify/revoke
-- [x] Devnet integration test suite (10 tests, real proofs)
-- [x] CLI + Preview deployment
-- [x] React front end with wallet connect
-- [x] CI/CD pipeline (GitHub Actions: compile, tests, web build, Pages deploy)
-- [x] Live demo on GitHub Pages
-- [ ] 1-minute demo video (link in the section above)
-- [ ] Student-facing "check my result" view + QR codes
-- [ ] Batch issuance for many students (multiple `issueCertificate` per transaction)
-
-## Product Proposal
-
-See [`docs/PROPOSAL.md`](docs/PROPOSAL.md) — the bootcamp proposal (idea from the provided list: **ZKP-based certificate registry**), with privacy model and scope.
+- **`Buffer is not defined`** — the compact runtime needs Node globals; `vite-plugin-node-polyfills` is configured in `frontend/vite.config.ts` (`globals: { Buffer, process, global }`
 
 ## License
 
